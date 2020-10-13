@@ -251,24 +251,24 @@ def training_loop(
             # Fast path without gradient accumulation.
             if len(rounds) == 1:
                 tflib.run([G_train_op, data_fetch_op])
-                if run_G_reg:
-                    tflib.run(G_reg_op)
+                # if run_G_reg:
+                #     tflib.run(G_reg_op)
                 tflib.run([D_train_op, Gs_update_op], {Gs_beta_in: Gs_beta})
-                if run_D_reg:
-                    tflib.run(D_reg_op)
+                # if run_D_reg:
+                #     tflib.run(D_reg_op)
 
             # Slow path with gradient accumulation.
             else:
                 for _round in rounds:
                     tflib.run(G_train_op)
-                    if run_G_reg:
-                        tflib.run(G_reg_op)
+                    # if run_G_reg:
+                    #     tflib.run(G_reg_op)
                 tflib.run(Gs_update_op, {Gs_beta_in: Gs_beta})
                 for _round in rounds:
                     tflib.run(data_fetch_op)
                     tflib.run(D_train_op)
-                    if run_D_reg:
-                        tflib.run(D_reg_op)
+                    # if run_D_reg:
+                    #     tflib.run(D_reg_op)
 
             # Run validation.
             if aug is not None:
@@ -315,10 +315,11 @@ def training_loop(
                 pkl = os.path.join(run_dir, f'network-snapshot-{cur_nimg // 1000:06d}.pkl')
                 with open(pkl, 'wb') as f:
                     pickle.dump((G, D, Gs), f)
-                if len(metrics):
-                    print('Evaluating metrics...')
-                    for metric in metrics:
-                        metric.run(pkl, num_gpus=num_gpus)
+                if cur_tick % network_snapshot_ticks*2 == 0:
+                    if len(metrics):
+                        print('Evaluating metrics...')
+                        for metric in metrics:
+                            metric.run(pkl, num_gpus=num_gpus)
 
             # Update summaries.
             for metric in metrics:
