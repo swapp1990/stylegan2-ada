@@ -24,9 +24,9 @@ from training import dataset
 # Select size and contents of the image snapshot grids that are exported
 # periodically during training.
 
-def setup_snapshot_image_grid(training_set):
-    gw = np.clip(7680 // training_set.shape[2], 7, 32)
-    gh = np.clip(4320 // training_set.shape[1], 4, 32)
+def setup_snapshot_image_grid(training_set, nrow=5, ncol=2):
+    gw = np.clip(1920 // training_set.shape[2], nrow, 32)
+    gh = np.clip(1080 // training_set.shape[1], ncol, 32)
 
     # Unconditional.
     if training_set.label_size == 0:
@@ -222,12 +222,18 @@ def training_loop(
     maintenance_time = tick_start_time - start_time
     cur_nimg = 0
     cur_tick = -1
+    cur_step = 0
     tick_start_nimg = cur_nimg
     running_mb_counter = 0
 
     done = False
+    print("minibatch_repeats ", minibatch_repeats)
     while not done:
-
+        cur_step = cur_step+1
+        if cur_step%5 == 0:
+            print("cur_nimg ", cur_nimg)
+            grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
+            save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes_temp.png'), drange=[-1,1], grid_size=grid_size)
         # Compute EMA decay parameter.
         Gs_nimg = G_smoothing_kimg * 1000.0
         if G_smoothing_rampup is not None:
@@ -272,6 +278,7 @@ def training_loop(
         if aug is not None:
             aug.tune(minibatch_size * minibatch_repeats)
 
+        truncation_psi = 0.5
         # Perform maintenance tasks once per tick.
         done = (cur_nimg >= total_kimg * 1000) or (abort_fn is not None and abort_fn())
         if done or cur_tick < 0 or cur_nimg >= tick_start_nimg + kimg_per_tick * 1000:
@@ -300,6 +307,8 @@ def training_loop(
 
             # Save snapshots.
             if image_snapshot_ticks is not None and (done or cur_tick % image_snapshot_ticks == 0):
+                w_avg = Gs.get_var('dlatent_avg')
+                grid_latents = w_avg + (grid_latents - w_avg) * truncation_psi # [minibatch, layer, component]
                 grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
                 save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes{cur_nimg // 1000:06d}.png'), drange=[-1,1], grid_size=grid_size)
             if network_snapshot_ticks is not None and (done or cur_tick % network_snapshot_ticks == 0):
