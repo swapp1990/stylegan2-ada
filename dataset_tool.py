@@ -650,12 +650,14 @@ def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
 
 #----------------------------------------------------------------------------
 from pathlib import Path
+import data_utils
 def create_from_images(tfrecord_dir, image_dir, shuffle):
     print('Loading images from "%s"' % image_dir)
     image_filenames = []
     # for file_path in Path(image_dir).glob('**/*.c'):
     #     image_filenames.append(file_path)
-    image_filenames = sorted(glob.glob(os.path.join(image_dir, '**/*')))
+    image_filenames = sorted(data_utils.make_dataset(image_dir))
+    # image_filenames = sorted(glob.glob(os.path.join(image_dir, '**/*')))
     print(len(image_filenames), " found")
     if len(image_filenames) == 0:
         error('No input images found')
@@ -663,6 +665,7 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
     img = PIL.Image.open(image_filenames[0])
     img = np.asarray(img)
     resolution = img.shape[0]
+    print("resolution ", resolution)
     channels = img.shape[2] if img.ndim == 3 else 1
     if img.shape[1] != resolution:
         error('Input images must have the same width and height')
