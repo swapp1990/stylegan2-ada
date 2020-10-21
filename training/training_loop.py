@@ -232,7 +232,7 @@ def training_loop(
         cur_step = cur_step+1
         if cur_step%5 == 0:
             print("cur_nimg ", cur_nimg)
-            grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu)
+            grid_fakes = Gs.run(grid_latents, grid_labels, is_validation=True, minibatch_size=minibatch_gpu, truncation_psi = 0.5)
             save_image_grid(grid_fakes, os.path.join(run_dir, f'fakes_temp.png'), drange=[-1,1], grid_size=grid_size)
         # Compute EMA decay parameter.
         Gs_nimg = G_smoothing_kimg * 1000.0
